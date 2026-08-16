@@ -21,7 +21,6 @@
         "SM-S936U",
         "SM-S936U1",
         "SM-S936W",
-        "SM-S937B",
         "SM-S937N",
         "SM-S937U",
         "SM-S937U1",
@@ -57,6 +56,22 @@
       "exploit": {
         "url": "https://raw.githubusercontent.com/BuSung-dev/Root-My-Galaxy-Payloads/main/artifacts/psq-S9370ZCS9CZG1/cve-2026-43499-app.so",
         "size": 125264
+      },
+      "kernelsu": {
+        "url": "https://raw.githubusercontent.com/BuSung-dev/Root-My-Galaxy-Payloads/main/kernelsu/ksud-s25u-kdp",
+        "size": 6407096
+      }
+    },
+    {
+      "payloadId": "psq-S937BXXS7CZE1",
+      "displayName": "Galaxy S25 Edge | Kernel 6.6.98",
+      "models": [
+        "SM-S937B"
+      ],
+      "kernelVersions": ["6.6.98"],
+      "exploit": {
+        "url": "https://raw.githubusercontent.com/BuSung-dev/Root-My-Galaxy-Payloads/main/artifacts/psq-S937BXXS7CZE1/cve-2026-43499-app.so",
+        "size": 104128
       },
       "kernelsu": {
         "url": "https://raw.githubusercontent.com/BuSung-dev/Root-My-Galaxy-Payloads/main/kernelsu/ksud-s25u-kdp",
