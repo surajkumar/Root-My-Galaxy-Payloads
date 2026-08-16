@@ -12,6 +12,11 @@ completed offline-gate status are recorded in
 The no-BTF Android 5.10 procedure and legacy `rt_mutex_waiter` layout are
 recorded separately in
 [`SM-A155N-A155NKSS6BYH1.md`](SM-A155N-A155NKSS6BYH1.md).
+For a new firmware build on a board that already has a device-tested
+profile (same SoC, same kernel branch), use the shorter sibling-build
+procedure in [`PORTING-SIBLING.md`](PORTING-SIBLING.md) instead; it covers
+the Qualcomm physical-load evidence rules, the offsets that actually move
+between builds, and the on-device test runbook.
 
 ## 1. Identify the exact firmware
 
